@@ -25,8 +25,7 @@ export class adminController {
             });
             return resSuccses(res, admin, 201)
         } catch (error) {
-            return ErrorRes(res, error);
-
+            return ErrorRes(res, error)
         }
     }
 
@@ -100,7 +99,6 @@ export class adminController {
 
         }
     }
-
 
 
 
