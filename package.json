@@ -13,11 +13,17 @@
   "description": "",
   "dependencies": {
     "bcrypt": "^6.0.0",
+<<<<<<< HEAD
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+=======
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "joi": "^17.13.3",
+>>>>>>> 2e502ffb688c0430f18739a512618e5eaa91dcc0
     "mongoose": "^8.15.1",
     "nodemon": "^3.1.10"
   }
