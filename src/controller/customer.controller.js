@@ -74,7 +74,8 @@ export class CustomerController {
         await transporter.sendMail(mailOPtions);
 
         cache.set(email, otp, 120);
-        return resSuccses(res, { message: 'OTP sent successfully to email' });
+        return resSuccses(res, {});
+        
     } catch (error) {
         console.log(error);
         return ErrorRes(res, 'Error on sending email', 400);
@@ -97,6 +98,7 @@ export class CustomerController {
             if (!cacheOTP || cacheOTP != value.otp) {
                 return ErrorRes(res, 'OTP expired', 400);
             }
+            cache.del(value.email);
             const payload = { id: customer._id };
             const accessToken = await token.generateAccessToken(payload);
             const refreshToken = await token.generateRefreshToken(payload);
@@ -108,12 +110,57 @@ export class CustomerController {
             return resSuccses(res, {
                 data: customer,
                 token: accessToken
-            }, 201);
-
-
+            }, 200);
         } catch (error) {
-            return { value, error };
+            return ErrorRes(res, error);
 
         }
     }
+
+
+
+    async newAccessToken(req, res) {
+        try {
+            const refreshToken = req.cookies?.refreshTokenCutomer;
+            if (!refreshToken) {
+                return ErrorRes(res, 'Refresh token epxired', 400);
+            }
+            const decodedToken = await token.verifyToken(refreshToken, config.REFRESH_TOKEN_KEY);
+            if (!decodedToken) {
+                return ErrorRes(res, 'Invalid token', 400);
+            }
+            const customer = await Customer.findById(decodedToken.id);
+            if (!customer) {
+                return ErrorRes(res, 'Customer not found', 404);
+            }
+            const payload = { id: Customer._id };
+            const accessToken = await token.generateAccessToken(payload);
+            return resSuccses(res, {
+                token: accessToken
+            });
+        } catch (error) {
+            return ErrorRes(res, error);
+        }
+    }
+    
+    async logOut(req, res) {
+        try {
+            const refreshToken = req.cookies?.refreshTokenCutomer;
+            if (!refreshToken) {
+                return ErrorRes(res, 'Refresh token epxired', 400);
+            }
+            const decodedToken = await token.verifyToken(refreshToken, config.REFRESH_TOKEN_KEY);
+            if (!decodedToken) {
+                return ErrorRes(res, 'Invalid token', 400);
+            }
+            const customer = await Customer.findById(decodedToken.id);
+            if (!customer) {
+                return ErrorRes(res, 'Customer not found', 404);
+            }
+            res.clearCookie('refreshTokenCustomer');
+            return resSuccses(res, {});
+        } catch (error) {
+            return ErrorRes(res, error);
+        }
+ }
 }

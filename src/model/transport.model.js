@@ -3,6 +3,7 @@ import { Schema, model } from "mongoose";
 const transportSchema = new Schema({
     transportType: { type: String, required: true },
     transportNumber: { type: String, required: true },
+    phoneNumber: { type: String, required: true },
     class: { type: String, required: true },
     seat: { type: String, required: true }
 }, {
@@ -14,7 +15,7 @@ const transportSchema = new Schema({
 transportSchema.virtual('tickets', {
     ref: "Ticket",
     localField: '_id',
-    foreignField: 'transportID' 
+    foreignField: 'transportID'
 });
 
 const Transport = model('Transport', transportSchema);

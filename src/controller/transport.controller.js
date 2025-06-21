@@ -2,7 +2,20 @@ import { isValidObjectId } from "mongoose";
 import { ErrorRes } from "../helpers/error-handle.js";
 import { resSuccses } from "../helpers/resSuccess.js";
 import Transport from "../model/transport.model.js";
-import { createTransportValidator, updateTransportValidator } from "../validation/transport.validation.js";
+import {
+    createTransportValidator,
+    signInTransportValidator,
+    confirmsignInTransportValidator,
+    updateTransportValidator
+} from "../validation/transport.validation.js";
+import { generateOTP } from '../helpers/generate-otp.js';
+import Ticket from "../model/ticket.model.js";
+import NodeCache from "node-cache";
+import { Token } from '../utils/token-service.js'
+import { sendSMS } from '../helpers/send-sms.js'
+
+const cache = new NodeCache();
+const token = new Token();
 
 export class TransportController {
 
@@ -12,9 +25,9 @@ export class TransportController {
             if (error) {
                 return ErrorRes(res, error, 422);
             }
-            const existsTransportNumber = await Transport.findOne({ transportNumber: value.transportNumber });
-            if (existsTransportNumber) {
-                return ErrorRes(res, `Transport Number already exists`, 409);
+            const existsPhoneNumber = await Transport.findOne({ phoneNumber: value.phoneNumber });
+            if (existsPhoneNumber) {
+                return ErrorRes(res, `Transport phoneNumber already exists`, 409);
             }
             const transport = await Transport.create(value);
             return resSuccses(res, transport, 201);
@@ -23,6 +36,62 @@ export class TransportController {
             return ErrorRes(res, error)
         }
     };
+
+    async signInTransport(req, res) {
+        try {
+            const { value, error } = signInTransportValidator(req.body);
+            if (error) {
+                return ErrorRes(res, error, 422);
+            }
+            const { phoneNumber } = value;
+            const transport = await Transport.findOne({ phoneNumber });
+            if (!transport) {
+                return ErrorRes(res, 'Transport not found', 404);
+            }
+            const otp = generateOTP();
+            cache.set(phoneNumber, otp, 120);
+            const sms = "Sizning tasdiqlash parolingiz: " + otp;
+            await sendSMS(phoneNumber.split('+')[1], sms);
+            return resSuccses(res, {});
+
+        } catch (error) {
+            return ErrorRes(res, error)
+
+        }
+    };
+
+    async confirmsignInTransport(req, res) {
+        try {
+            const { value, error } = confirmsignInTransportValidator(req.body);
+            if (error) {
+                return ErrorRes(res, error, 422);
+            }
+            const transport = await Transport.findOne({ phoneNumber: value.phoneNumber });
+            if (!transport) {
+                return ErrorRes(res, 'Transport not found ', 404);
+            }
+            const cacheOTP = cache.get(value.phoneNumber);
+            if (!cacheOTP || cacheOTP != value.otp) {
+                return handleError(res, 'OTP expired', 400);
+            }
+            cache.del(value.phoneNumber);
+            const payload = { id: transport._id };
+            const accessToken = await token.generateAccessToken(payload);
+            const refreshToken = await token.generateRefreshToken(payload);
+            res.cookie('refreshTokeTransport', refreshToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 30 * 24 * 60 * 60 * 1000
+            });
+            return resSuccses(res, {
+                data: transport,
+                token: accessToken
+            }, 200);
+        } catch (error) {
+            return ErrorRes(res, error)
+
+        }
+    }
 
 
     async getAllTransport(_, res) {
@@ -35,7 +104,7 @@ export class TransportController {
     };
 
     async getByIdTransport(req, res) {
-        try {       
+        try {
             const id = req.params.id;
             const transport = await TransportController.findTransportById(res, id);
             return resSuccses(res, transport);

@@ -5,6 +5,8 @@ const router = Router();
 
 router
     .post('/', transport.createTransport)
+    .post('/signin', transport.signInTransport)
+    .post('confirm-signin', transport.confirmsignInTransport)
     .get('/',  transport.getAllTransport)
     .get('/:id', transport.getByIdTransport)
     .patch('/:id', transport.getUpdateById)
