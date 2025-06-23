@@ -4,8 +4,10 @@ import { ErrorRes } from "../helpers/error-handle.js";
 import { Crypto } from '../utils/encrypte-decrypt.js';
 import { isValidObjectId } from "mongoose";
 import { createvalidator, updateValidator } from "../validation/admin.validation.js";
-
+import { Token } from "../utils/token-service.js";
+import { config } from "dotenv";
 const crypto = new Crypto();
+const token = new Token();
 
 export class adminController {
     async createadmin(req, res) {
@@ -26,6 +28,82 @@ export class adminController {
             return resSuccses(res, admin, 201)
         } catch (error) {
             return ErrorRes(res, error)
+        }
+    };
+
+
+    async signInAdmin(req, res) {
+        try {
+            const { value, error } = createvalidator(req.body);
+            if (error) {
+                return ErrorRes(res, error, 422);
+            }
+            const admin = await Admin.findOne({ username: value.username });
+            if (!admin) {
+                return ErrorRes(res, 'Admin not found', 404);
+            }
+            const payload = { id: admin._id, role: admin.role };
+            const accessToken = await token.generateAccessToken(payload);
+            const refreshToken = await token.generateRefreshToken(payload);
+            res.cookie('refreshTokenAdmin', refreshToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 30 * 24 * 60 * 60 * 1000
+
+            });
+            return resSuccses(res, { data: admin, token: accessToken }, 200);
+
+        } catch (error) {
+            return ErrorRes(res, error);
+
+        }
+    };
+
+    async newAccessToken(req, res) {
+        try {
+            const refreshToken = req.cookie?.refreshTokenAdmin;
+            if (!refreshToken) {
+                return ErrorRes(res, 'Refresh token expired', 400);
+            }
+            const decodedToken = await token.verifyToken(refreshToken, config.REFRESH_TOKEN_KEY);
+            if (!decodedToken) {
+                return ErrorRes(res, 'Invalid Token ', 400);
+            }
+            const admin = await Admin.findById(decodedToken.id);
+            if (!admin) {
+                return ErrorRes(res, 'Admin not found', 404);
+            }
+            const payload = { id: admin._id, role: admin.role };
+            const accessToken = await token.generateAccessToken(payload);
+            return resSuccses(res, {
+                token:accessToken
+            });
+
+        } catch (error) {
+            return ErrorRes(res, error)
+
+        }
+    };
+
+    async logOut(req, res) {
+        try {
+            const refreshToken = req.cookie?.refreshToken;
+            if(!refreshToken) {
+                return ErrorRes(res,'Refresh token expired', 400);
+            }
+            const decodedToken = await token.verifyToken(refreshToken, config.REFRESH_TOKEN_KEY);
+            if(!decodedToken){
+                return ErrorRes(res, 'Invalid token', 400);
+            }
+            const admin = await Admin.findById(decodedToken.id);
+            if(!admin){
+                return ErrorRes(res, 'Admin not found ', 404);
+            }
+            res.clearCookie('refreshTokenAdmin');
+            return resSuccses(res, {});
+        } catch (error) {
+            return ErrorRes(res, error);
+            
         }
     }
 
@@ -76,7 +154,7 @@ export class adminController {
             const id = req.params.id;
             await adminController.FindByIdAdmin(res, id);
             await Admin.findByIdAndDelete(id);
-            return resSuccses(res, { message :'Admin not found'}, 404);
+            return resSuccses(res, { message: 'Admin not found' }, 404);
 
         } catch (error) {
             return ErrorRes(res, error)
