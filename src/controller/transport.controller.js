@@ -59,6 +59,55 @@ export class TransportController {
 
         }
     };
+    
+
+    async newAccessToken(req, res) {
+        try {
+            const refreshToken = req.cookie?.refreshTokenTransport;
+            if (!refreshToken) {
+                return ErrorRes(res, 'Refresh token expired', 400);
+            }
+            const decodedToken = await token.verifyToken(refreshToken, config.REFRESH_TOKEN_KEY);
+            if (!decodedToken) {
+                return ErrorRes(res, 'Invalid Token ', 400);
+            }
+            const transport = await Transport.findById(decodedToken.id);
+            if (!transport) {
+                return ErrorRes(res, 'Transport not found', 404);
+            }
+            const payload = { id: transport._id, role: transport.role };
+            const accessToken = await token.generateAccessToken(payload);
+            return resSuccses(res, {
+                token:accessToken
+            });
+
+        } catch (error) {
+            return ErrorRes(res, error)
+
+        }
+    };
+
+    async logOut(req, res) {
+        try {
+            const refreshToken = req.cookie?.refreshToken;
+            if(!refreshToken) {
+                return ErrorRes(res,'Refresh token expired', 400);
+            }
+            const decodedToken = await token.verifyToken(refreshToken, config.REFRESH_TOKEN_KEY);
+            if(!decodedToken){
+                return ErrorRes(res, 'Invalid token', 400);
+            }
+            const transport = await Transport.findById(decodedToken.id);
+            if(!transport){
+                return ErrorRes(res, 'Transport not found ', 404);
+            }
+            res.clearCookie('refreshTokenTransport');
+            return resSuccses(res, {});
+        } catch (error) {
+            return ErrorRes(res, error);
+            
+        }
+    }
 
     async confirmsignInTransport(req, res) {
         try {

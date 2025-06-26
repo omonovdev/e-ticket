@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "superasdmin": "node src/db/create-supperadmin.js",
+    "superadmin": "node src/db/create-supperadmin.js",
     "dev": "nodemon src/main.js"
   },
   "keywords": [],

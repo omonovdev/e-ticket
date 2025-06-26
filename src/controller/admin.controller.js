@@ -42,6 +42,10 @@ export class adminController {
             if (!admin) {
                 return ErrorRes(res, 'Admin not found', 404);
             }
+            const isMatchPass = await crypto.decrypt(value.password, admin.hashedPassword);
+            if (!isMatchPass) {
+                return ErrorRes(res, 'Username or password incorrect', 400);
+            }
             const payload = { id: admin._id, role: admin.role };
             const accessToken = await token.generateAccessToken(payload);
             const refreshToken = await token.generateRefreshToken(payload);

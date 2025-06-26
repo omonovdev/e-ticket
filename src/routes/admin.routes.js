@@ -14,7 +14,7 @@ const router = Router();
 router
     .post('/', AuthGuard, RolesGuard(['superadmin']), controller.createadmin)
     .post('/signin', controller.signInAdmin)
-    .post('token', controller.newAccessToken)
+    .post('/token', controller.newAccessToken)
     .post('/logout', AuthGuard, controller.logOut)
     .get('/', AuthGuard, RolesGuard(['superadmin']), controller.getAlladmins)
     .get('/:id', AuthGuard, SelfGuard, controller.getByIDAdmin)

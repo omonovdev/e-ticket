@@ -20,4 +20,15 @@ app.use('/transports', transportRouter);
 app.use('/tickets', ticketRouter);
 app.use('/customer', customerRouter);
 
-app.listen(config.PORT, () => console.log(`Server running on port `, +config.PORT));
+app.use((err, req, res, next) => {
+    if (err) {
+        const statusCode = err.status ? err.status : 500;
+        const message = err.message ? err.message : 'Internal server error';
+        return res.status(statusCode).json({
+            statusCode,
+            message
+        });
+    }
+})
+
+app.listen(config.PORT, () => console.log(`Server running on port `, +config.PORT));  
